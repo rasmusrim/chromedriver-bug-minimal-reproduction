@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Edge;
+using OpenQA.Selenium.Chrome;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 
@@ -35,25 +35,15 @@ public class Worker : BackgroundService
 
             var url = "https://www.nrk.no";
 
-            var options = new EdgeOptions();
+            var options = new ChromeOptions();
             options.AddArgument("headless");
             options.AddArgument("ignore-certificate-errors");
 
-            var currentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            using var edgeDriverService = EdgeDriverService.CreateDefaultService(currentDirectory);
-            edgeDriverService.HideCommandPromptWindow = true;
+            Log.Information("Options set");
 
-            var msEdgeDriverPath = Path.Combine(currentDirectory ?? "", "msedgedriver.exe");
+            using var browser = new ChromeDriver(options);
+            Log.Information("Browser instance created");
 
-            if (!File.Exists(msEdgeDriverPath))
-            {
-                throw new FileNotFoundException(
-                    "msedgedriver.exe does not exist in the current directory.",
-                    msEdgeDriverPath
-                );
-            }
-
-            using var browser = new EdgeDriver(edgeDriverService, options);
             browser.Navigate().GoToUrl(url);
 
             var printOptions = new PrintOptions
@@ -62,13 +52,13 @@ public class Worker : BackgroundService
                 OutputBackgroundImages = true
             };
 
-
             var print = browser.Print(printOptions);
 
             print.SaveAsFile(Path.Combine(baseDir, "pdf.pdf"));
 
             Log.Information(print.AsBase64EncodedString.Length > 1000 ? "Success" : "Failure");
-        } catch (Exception e)
+        }
+        catch (Exception e)
         {
             Log.Error(e, e.Message);
         }
